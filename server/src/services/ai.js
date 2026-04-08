@@ -16,19 +16,25 @@ Always respond with ONLY valid JSON, no markdown, no extra text:
 }`;
 
 export async function analyzeIdea(title, description) {
-  const prompt = `${SYSTEM_PROMPT}\n\nStartup Idea Title: ${title}\n\nDescription: ${description}`;
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1000 },
-      }),
-    }
-  );
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: `Startup Idea Title: ${title}\n\nDescription: ${description}`,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+    }),
+  });
 
   const data = await res.json();
 
@@ -36,7 +42,7 @@ export async function analyzeIdea(title, description) {
     throw new Error(`${res.status} ${JSON.stringify(data)}`);
   }
 
-  const raw = data.candidates[0].content.parts[0].text.trim();
+  const raw = data.choices[0].message.content.trim();
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("No JSON found in response");
   return JSON.parse(match[0]);
