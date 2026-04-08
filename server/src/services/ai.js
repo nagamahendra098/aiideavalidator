@@ -1,9 +1,9 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-const SYSTEM_PROMPT = `You are a sharp, experienced startup analyst. When given a startup idea, you produce an honest, grounded validation report. Be direct, specific, and realistic — not hype-driven.
+const SYSTEM_PROMPT = `You are a sharp, experienced startup analyst. Analyze startup ideas honestly and realistically.
 
-Always respond with ONLY valid JSON, no markdown, no extra text. Use this exact structure:
+Always respond with ONLY valid JSON, no markdown, no extra text:
 {
   "problemSummary": "2-3 sentences describing the core problem being solved",
   "customerPersona": "2-3 sentences describing the primary target customer",
@@ -16,22 +16,19 @@ Always respond with ONLY valid JSON, no markdown, no extra text. Use this exact 
 }`;
 
 export async function analyzeIdea(title, description) {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Startup Idea Title: ${title}\n\nDescription: ${description}` },
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-    }),
-  });
+  const prompt = `${SYSTEM_PROMPT}\n\nStartup Idea Title: ${title}\n\nDescription: ${description}`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1000 },
+      }),
+    }
+  );
 
   const data = await res.json();
 
@@ -39,7 +36,7 @@ export async function analyzeIdea(title, description) {
     throw new Error(`${res.status} ${JSON.stringify(data)}`);
   }
 
-  const raw = data.choices[0].message.content.trim();
+  const raw = data.candidates[0].content.parts[0].text.trim();
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("No JSON found in response");
   return JSON.parse(match[0]);
