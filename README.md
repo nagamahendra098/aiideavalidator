@@ -167,6 +167,4 @@ Visit: http://localhost:5173
 
 ---
 
-## Prompts Used
 
-The AI system prompt instructs Claude to act as an experienced startup analyst and return a strict JSON object with all report fields. It emphasizes being honest and specific rather than hype-driven. The prompt is in `server/src/services/ai.js`.
